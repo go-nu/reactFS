@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2');  // mysql2 추천!
+const mysql = require('mysql2');
 
 const app = express();
 const PORT = 5000;
@@ -13,8 +13,8 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: '1234',     // 본인 MySQL 비밀번호!
-  database: 'todo_app', // 본인 DB 이름!
+  password: '1234',
+  database: 'todo_app',
 });
 
 // 연결 확인
@@ -35,6 +35,46 @@ app.get('/todos', (req, res) => {
       return;
     }
     res.json(results);
+  });
+});
+
+// POST 새로운 Todo 추가
+app.post('/todos', (req, res) => {
+  const { text } = req.body;
+  db.query('INSERT INTO todos (text) VALUES (?)', [text], (err, result) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send(err);
+      return;
+    }
+    res.json({ id: result.insertId, text, completed: false });
+  });
+});
+
+// PUT Todo 상태 변경
+app.put('/todos/:id', (req, res) => {
+  const { completed } = req.body;
+  const { id } = req.params;
+  db.query('UPDATE todos SET completed = ? WHERE id = ?', [completed, id], (err) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send(err);
+      return;
+    }
+    res.sendStatus(200);
+  });
+});
+
+// DELETE Todo 삭제
+app.delete('/todos/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM todos WHERE id = ?', [id], (err) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send(err);
+      return;
+    }
+    res.sendStatus(200);
   });
 });
 

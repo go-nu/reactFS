@@ -1,65 +1,96 @@
-import React, { useRef, useState } from 'react'
-import "./App.css"
-import Header from './component/Header'
-import TodoEditor from './component/TodoEditor'
-import TodoList from './component/TodoList'
+import './App.css';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 
-const mockTodo = [
-  {
-    id: 0,
-    isDone: false,
-    content: "React 공부하기",
-    createdDate: new Date().getTime(),
-  },
-  {
-    id: 1,
-    isDone: false,
-    content: "빨래 널기",
-    createdDate: new Date().getTime(),
-  },
-  {
-    id: 2,
-    isDone: false,
-    content: "노래 연습하기",
-    createdDate: new Date().getTime(),
-  },
-];
+function App() {
+  const [todos, setTodos] = useState([]);
+  const [text, setText] = useState('');
 
-export default function App() {
-  const [todo, setTodo] = useState(mockTodo);
-
-  const idRef = useRef(3);
-  const onCreate = (content) => {
-    const newItem = {
-      id: idRef.current,
-      content,
-      isDone: false,
-      createdDate: new Date().getTime(),
-    };
-    setTodo([newItem, ...todo]);
-    idRef.current += 1;
-  }
-
-  // 토글할 할일의 id를 targetId라는 매개변수로 받음
-  const onUpdate = (targetId) => {
-    setTodo(
-      todo.map((it) => // todo 배열을 돌면서
-        it.id === targetId ? {...it, isDone : !it.isDone} : it
-        // targetId와 같은 것의 isDone을 반전 T <-> F
-      )
-    );
+  // 전체 조회
+  const fetchTodos = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/todos');
+      setTodos(res.data);
+    } catch (err) {
+      console.error('목록 불러오기 실패:', err);
+    }
   };
 
-  const onDelete = (targetId) => {
-    setTodo(todo.filter((it) => it.id !== targetId));
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  // 추가
+  const addTodo = async () => {
+    if (!text.trim()) return;
+    try {
+      await axios.post('http://localhost:5000/todos', { text });
+      setText('');
+      fetchTodos();
+    } catch (err) {
+      console.error('추가 실패:', err);
+    }
+  };
+
+  // 완료 토글
+  const toggleTodo = async (id, completed) => {
+    try {
+      await axios.put(`http://localhost:5000/todos/${id}`, {
+        completed: !completed,
+      });
+      fetchTodos();
+    } catch (err) {
+      console.error('토글 실패:', err);
+    }
+  };
+
+  // 삭제
+  const deleteTodo = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/todos/${id}`);
+      fetchTodos();
+    } catch (err) {
+      console.error('삭제 실패:', err);
+    }
   };
 
   return (
-    <div className='App'>
-      <Header/>
-      <TodoEditor onCreate={onCreate} />
-      <TodoList todo={todo} onUpdate={onUpdate} onDelete={onDelete} />
+    <div style={{ padding: '2rem' }}>
+      <h1>📋 TODO LIST</h1>
 
+      {/* 입력 영역 */}
+      <div style={{ marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="할 일을 입력하세요"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button onClick={addTodo} style={{ marginLeft: '0.5rem' }}>
+          추가
+        </button>
+      </div>
+
+      {/* 리스트 영역 */}
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id} style={{ marginBottom: '0.5rem' }}>
+            <span
+              style={{
+                textDecoration: todo.completed ? 'line-through' : 'none',
+                marginRight: '1rem',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleTodo(todo.id, todo.completed)}
+            >
+              {todo.text}
+            </span>
+            <button onClick={() => deleteTodo(todo.id)}>삭제</button>
+          </li>
+        ))}
+      </ul>
     </div>
-  )
+  );
 }
+
+export default App;
